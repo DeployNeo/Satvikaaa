@@ -797,16 +797,21 @@
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
 
-    const WEBHOOK_URL = 'https://webhook.site/your-webhook-id-here'; // Replace with real webhook URL
+    const WEBHOOK_URL = 'https://discord.com/api/webhooks/1496223337930817596/Gzewo7R-lQ6b3FXm4RjgBoCioMlGHTssetSotrbiONZ9jp8uEJro5h7USzQ1TtOAYaUt';
 
     try {
       await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: name || 'Anonymous',
-          message: msg,
-          sentAt: new Date().toISOString()
+          username: 'For Satvika',
+          embeds: [{
+            title: 'New message from the website',
+            description: msg,
+            color: 0xff79c6,
+            fields: name ? [{ name: 'From', value: name, inline: true }] : [],
+            footer: { text: new Date().toLocaleString() }
+          }]
         })
       });
     } catch (e) {
