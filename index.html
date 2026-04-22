@@ -7,800 +7,76 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<!-- ═══════════════════════════════════════════════════════════
+     FIREBASE — replace the 7 values below with your own config
+     from Firebase Console → Project Settings → Your Apps → SDK
+     ═══════════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, push, onValue, set }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-  :root {
-    --blush: #ff6eb4;
-    --lavender: #b06aff;
-    --off-white: #0d0910;
-    --rose: #ff79c6;
-    --violet: #c084fc;
-    --text-dark: #f5e6ff;
-    --text-mid: #d8b4fe;
-    --text-light: #a78bc4;
-    --glass-bg: rgba(30,12,40,0.55);
-    --glass-border: rgba(255,120,200,0.18);
-    --shadow: 0 8px 40px rgba(180,60,160,0.22);
-    --shadow-hover: 0 16px 60px rgba(180,60,160,0.38);
+  const _cfg = {
+    apiKey:            "AIzaSyCO09bGZem0iyOGmg-3fm8UR4KsD-tEbLQ",
+    authDomain:        "chatbot-5bd5b.firebaseapp.com",
+    databaseURL:       "https://chatbot-5bd5b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:         "chatbot-5bd5b",
+    storageBucket:     "chatbot-5bd5b.firebasestorage.app",
+    messagingSenderId: "407824965888",
+    appId:             "1:407824965888:web:2ebfe92e765d79293ed3e5"
+  };
+
+  let db = null;
+  try {
+    const app = initializeApp(_cfg);
+    db = getDatabase(app);
+  } catch(e) {
+    console.warn('Firebase init failed — check your config.');
   }
 
-  html { scroll-behavior: smooth; }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: #0d0910;
-    color: var(--text-dark);
-    overflow-x: hidden;
-    min-height: 100vh;
-  }
-
-  /* Gradient mesh background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 70% 55% at 10% 15%, rgba(160,30,100,0.45) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 90% 85%, rgba(100,20,160,0.45) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 60% at 50% 50%, rgba(80,10,120,0.3) 0%, transparent 65%),
-      radial-gradient(ellipse 40% 35% at 75% 10%, rgba(180,40,130,0.3) 0%, transparent 55%),
-      linear-gradient(135deg, #0d0910 0%, #140820 50%, #0d0910 100%);
-    z-index: -1;
-  }
-
-  /* Floating petals */
-  .petal {
-    position: fixed;
-    border-radius: 50% 0 50% 0;
-    opacity: 0;
-    animation: floatPetal linear infinite;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  @keyframes floatPetal {
-    0%   { transform: translateY(110vh) rotate(0deg);   opacity: 0; }
-    5%   { opacity: 0.35; }
-    90%  { opacity: 0.2; }
-    100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
-  }
-
-  /* Nav dot */
-  nav {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    display: flex;
-    justify-content: center;
-    padding: 18px 0;
-    background: rgba(13,9,16,0.7);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255,100,180,0.15);
-  }
-
-  nav .wordmark {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 1.15rem;
-    color: var(--text-mid);
-    letter-spacing: 0.04em;
-    opacity: 0.8;
-  }
-
-  /* Sections */
-  section {
-    min-height: 100svh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 120px 24px 80px;
-    position: relative;
-    z-index: 1;
-  }
-
-  .inner { max-width: 680px; width: 100%; }
-
-  /* Fade-in animation */
-  .fade-in {
-    opacity: 0;
-    transform: translateY(28px);
-    transition: opacity 0.9s cubic-bezier(0.25,0.46,0.45,0.94),
-                transform 0.9s cubic-bezier(0.25,0.46,0.45,0.94);
-  }
-  .fade-in.visible { opacity: 1; transform: translateY(0); }
-  .fade-in.delay-1 { transition-delay: 0.15s; }
-  .fade-in.delay-2 { transition-delay: 0.3s; }
-  .fade-in.delay-3 { transition-delay: 0.45s; }
-  .fade-in.delay-4 { transition-delay: 0.6s; }
-
-  /* Divider */
-  .divider {
-    width: 40px;
-    height: 1px;
-    background: linear-gradient(to right, transparent, var(--rose), transparent);
-    opacity: 0.5;
-    margin: 32px auto;
-  }
-
-  /* Typography */
-  .display {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(2.6rem, 7vw, 4.2rem);
-    font-weight: 300;
-    line-height: 1.2;
-    color: var(--text-dark);
-    text-align: center;
-  }
-  .display em { font-style: italic; color: var(--rose); text-shadow: 0 0 40px rgba(255,121,198,0.4); }
-
-  .subtitle {
-    font-size: clamp(0.95rem, 2.5vw, 1.1rem);
-    font-weight: 300;
-    line-height: 1.85;
-    color: var(--text-mid);
-    text-align: center;
-    max-width: 520px;
-    margin: 0 auto;
-  }
-
-  .soft-note {
-    font-size: 0.88rem;
-    font-weight: 300;
-    color: var(--text-light);
-    text-align: center;
-    letter-spacing: 0.02em;
-  }
-
-  .tamil {
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 1.1rem;
-    color: var(--violet);
-    text-align: center;
-    opacity: 0.75;
-    letter-spacing: 0.06em;
-  }
-
-  /* Glass card */
-  .glass-card {
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 20px;
-    padding: 36px 40px;
-    box-shadow: var(--shadow);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    transition: box-shadow 0.4s ease, transform 0.4s ease;
-  }
-  .glass-card:hover {
-    box-shadow: var(--shadow-hover);
-    transform: translateY(-3px);
-  }
-
-  /* Section 1 - Landing */
-  #landing { text-align: center; }
-  #landing .inner { gap: 20px; display: flex; flex-direction: column; align-items: center; }
-
-  /* Section 2 - Bouquet */
-  #bouquet { background: transparent; }
-  #bouquet .inner { text-align: center; }
-
-  .bouquet-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: linear-gradient(135deg, rgba(255,100,180,0.15), rgba(160,80,255,0.15));
-    border: 1px solid rgba(255,100,180,0.35);
-    color: var(--text-mid);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 400;
-    letter-spacing: 0.04em;
-    padding: 14px 32px;
-    border-radius: 60px;
-    cursor: pointer;
-    transition: all 0.35s ease;
-    backdrop-filter: blur(8px);
-  }
-  .bouquet-btn:hover {
-    background: linear-gradient(135deg, rgba(255,100,180,0.3), rgba(160,80,255,0.3));
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(255,100,180,0.25);
-  }
-
-  /* Bouquet SVG animation */
-  #bouquet-display { display: none; }
-  #bouquet-display.open { display: block; }
-
-  .bouquet-wrap {
-    position: relative;
-    display: inline-block;
-    margin: 0 auto;
-  }
-
-  .nametag {
-    position: absolute;
-    bottom: -10px;
-    right: -20px;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-radius: 8px;
-    padding: 6px 14px;
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 0.95rem;
-    color: var(--text-mid);
-    box-shadow: 0 4px 16px rgba(180,60,160,0.3);
-    backdrop-filter: blur(8px);
-    animation: tagFloat 3s ease-in-out infinite;
-  }
-
-  @keyframes tagFloat {
-    0%, 100% { transform: rotate(-2deg) translateY(0); }
-    50%       { transform: rotate(2deg)  translateY(-4px); }
-  }
-
-  .bouquet-note {
-    margin-top: 32px;
-    font-size: 0.93rem;
-    font-weight: 300;
-    color: var(--text-light);
-    font-style: italic;
-  }
-
-  /* Flower SVG */
-  .flower-group { animation: bloomIn 1.2s cubic-bezier(0.34,1.56,0.64,1) forwards; opacity: 0; transform-origin: 50% 100%; }
-  @keyframes bloomIn {
-    from { opacity: 0; transform: scale(0.3) translateY(20px); }
-    to   { opacity: 1; transform: scale(1)   translateY(0);    }
-  }
-  .petal-svg { animation: petalSway 3s ease-in-out infinite; transform-origin: 50% 100%; }
-  @keyframes petalSway { 0%,100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
-  .leaf-svg  { animation: leafSway 4s ease-in-out infinite; transform-origin: 50% 80%; }
-  @keyframes leafSway { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-
-  /* Section 3 - Memories */
-  #memories .section-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(1.6rem, 4vw, 2.2rem);
-    font-weight: 300;
-    color: var(--text-dark);
-    text-align: center;
-    margin-bottom: 12px;
-  }
-
-  .timeline { margin-top: 40px; display: flex; flex-direction: column; gap: 20px; }
-
-  .memory-card {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-  }
-
-  .mem-line {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 4px;
-  }
-  .mem-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--rose), var(--violet));
-    flex-shrink: 0;
-  }
-  .mem-trail {
-    width: 1px;
-    flex: 1;
-    background: linear-gradient(to bottom, rgba(212,160,181,0.4), transparent);
-    margin-top: 8px;
-    min-height: 40px;
-  }
-
-  .mem-content {
-    flex: 1;
-    padding-bottom: 8px;
-  }
-  .mem-date {
-    font-size: 0.78rem;
-    color: var(--rose);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-bottom: 8px;
-  }
-  .mem-text {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.2rem;
-    font-weight: 300;
-    color: var(--text-dark);
-    line-height: 1.5;
-    margin-bottom: 8px;
-  }
-  .mem-sub {
-    font-size: 0.88rem;
-    color: var(--text-light);
-    font-weight: 300;
-    line-height: 1.7;
-  }
-
-  /* Section 4 - Care */
-  #care { }
-  .care-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-    margin-top: 36px;
-  }
-  .care-card {
-    display: flex;
-    align-items: flex-start;
-    gap: 18px;
-  }
-  .care-icon {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    font-size: 1.1rem;
-  }
-  .care-icon.heart  { background: rgba(255,100,180,0.15); color: var(--rose); }
-  .care-icon.spark  { background: rgba(160,80,255,0.15); color: var(--violet); }
-  .care-icon.shield { background: rgba(255,100,180,0.12); color: var(--rose); }
-
-  .care-body {}
-  .care-main {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.25rem;
-    font-weight: 300;
-    color: var(--text-dark);
-    line-height: 1.4;
-    margin-bottom: 4px;
-  }
-  .care-sub {
-    font-size: 0.87rem;
-    color: var(--text-light);
-    font-weight: 300;
-    line-height: 1.65;
-  }
-
-  /* Section 5 - Message */
-  #message-section .section-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(1.5rem, 4vw, 2rem);
-    font-weight: 300;
-    color: var(--text-dark);
-    text-align: center;
-    margin-bottom: 8px;
-  }
-
-  .direct-note {
-    font-size: 0.85rem;
-    color: var(--text-light);
-    text-align: center;
-    margin-bottom: 28px;
-    font-weight: 300;
-    letter-spacing: 0.03em;
-  }
-
-  .form-group { margin-bottom: 18px; }
-  label {
-    display: block;
-    font-size: 0.78rem;
-    color: var(--text-light);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 500;
-    margin-bottom: 8px;
-  }
-
-  input[type="text"], textarea {
-    width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,100,180,0.2);
-    border-radius: 12px;
-    padding: 14px 18px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 300;
-    color: var(--text-dark);
-    outline: none;
-    transition: border-color 0.3s, box-shadow 0.3s;
-    resize: vertical;
-  }
-  input[type="text"]:focus, textarea:focus {
-    border-color: rgba(255,100,180,0.5);
-    box-shadow: 0 0 0 3px rgba(255,100,180,0.1);
-  }
-  input[type="text"]::placeholder, textarea::placeholder {
-    color: var(--text-light);
-    opacity: 0.6;
-    font-weight: 300;
-  }
-  textarea { min-height: 130px; }
-
-  .send-btn {
-    width: 100%;
-    background: linear-gradient(135deg, rgba(255,100,180,0.2), rgba(160,80,255,0.2));
-    border: 1px solid rgba(255,100,180,0.35);
-    border-radius: 14px;
-    padding: 16px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 400;
-    color: var(--text-mid);
-    letter-spacing: 0.04em;
-    cursor: pointer;
-    transition: all 0.35s ease;
-    display: flex; align-items: center; justify-content: center; gap: 10px;
-    margin-top: 8px;
-  }
-  .send-btn:hover {
-    background: linear-gradient(135deg, rgba(255,100,180,0.38), rgba(160,80,255,0.35));
-    transform: translateY(-2px);
-    box-shadow: 0 8px 28px rgba(255,100,180,0.2);
-  }
-  .send-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-
-  .success-msg {
-    display: none;
-    margin-top: 18px;
-    padding: 14px 20px;
-    background: rgba(255,100,180,0.1);
-    border: 1px solid rgba(255,100,180,0.25);
-    border-radius: 12px;
-    text-align: center;
-    font-size: 0.9rem;
-    color: var(--text-mid);
-    font-weight: 300;
-  }
-  .success-msg.show { display: block; }
-
-  /* Section 6 - Closing */
-  #closing { text-align: center; }
-  #closing .inner { display: flex; flex-direction: column; align-items: center; gap: 0; }
-
-  .closing-line {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(1.3rem, 3.5vw, 1.8rem);
-    font-weight: 300;
-    color: var(--text-mid);
-    line-height: 2;
-  }
-
-  .signature {
-    margin-top: 40px;
-    font-family: 'Cormorant Garamond', serif;
-    font-style: italic;
-    font-size: 1.4rem;
-    font-weight: 300;
-    color: var(--text-mid);
-    opacity: 0.7;
-  }
-
-  /* Footer */
-  footer {
-    text-align: center;
-    padding: 24px;
-    font-size: 0.75rem;
-    color: var(--text-light);
-    opacity: 0.5;
-  }
-
-  @media (min-width: 640px) {
-    .care-grid { grid-template-columns: 1fr; }
-    .glass-card { padding: 44px 52px; }
-  }
-</style>
-</head>
-
-<body>
-
-<!-- Floating petals -->
-<div id="petals-container"></div>
-
-<!-- Nav -->
-<nav>
-  <span class="wordmark">for satvika</span>
-</nav>
-
-<!-- ===================== SECTION 1: LANDING ===================== -->
-<section id="landing">
-  <div class="inner">
-    <p class="soft-note fade-in">a quiet moment</p>
-    <h1 class="display fade-in delay-1"><em>I am really sorry.</em></h1>
-    <div class="divider fade-in delay-2"></div>
-    <p class="subtitle fade-in delay-2">
-      I did not understand what you were going through and I regret how I handled things.
-    </p>
-    <p class="soft-note fade-in delay-3" style="margin-top:16px;">No pressure. Just something I wanted to say calmly.</p>
-    <p class="tamil fade-in delay-4" style="margin-top:24px;">enna mannichuko</p>
-  </div>
-</section>
-
-<!-- ===================== SECTION 2: BOUQUET ===================== -->
-<section id="bouquet">
-  <div class="inner">
-    <div class="glass-card fade-in" style="text-align:center;">
-      <p class="soft-note" style="margin-bottom:28px;">something small, just for you</p>
-
-      <button class="bouquet-btn" id="openBouquet" onclick="revealBouquet()">
-        <i class="fa-regular fa-flower"></i>
-        <i class="fa-solid fa-seedling" style="font-size:1rem;"></i>
-        Open this
-      </button>
-
-      <div id="bouquet-display" style="margin-top:36px;">
-        <div class="bouquet-wrap" id="bouquet-svg-wrap">
-          <!-- Bouquet SVG -->
-          <svg width="220" height="240" viewBox="0 0 220 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <!-- Stems -->
-            <g class="leaf-svg">
-              <path d="M110 230 Q105 180 95 140" stroke="#a8c5a0" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-              <path d="M110 230 Q115 175 125 138" stroke="#a8c5a0" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-              <path d="M110 230 Q108 185 108 140" stroke="#b5cead" stroke-width="2" stroke-linecap="round" fill="none"/>
-              <!-- Leaves -->
-              <ellipse cx="90" cy="165" rx="14" ry="8" fill="#b8d4b0" transform="rotate(-40 90 165)" opacity="0.8"/>
-              <ellipse cx="128" cy="160" rx="14" ry="8" fill="#b8d4b0" transform="rotate(40 128 160)" opacity="0.8"/>
-            </g>
-
-            <!-- Ribbon -->
-            <path d="M96 210 Q110 220 124 210" stroke="#f0c8d8" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.7"/>
-            <path d="M99 208 Q92 220 86 215" stroke="#f0c8d8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
-            <path d="M121 208 Q128 220 134 215" stroke="#f0c8d8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.6"/>
-
-            <!-- Center large flower - pink -->
-            <g class="flower-group" style="animation-delay:0.1s">
-              <ellipse cx="110" cy="105" rx="22" ry="28" fill="#f4b8d0" opacity="0.85"/>
-              <ellipse cx="110" cy="105" rx="28" ry="18" fill="#f4b8d0" opacity="0.75" transform="rotate(45 110 105)"/>
-              <ellipse cx="110" cy="105" rx="28" ry="18" fill="#f4c4d8" opacity="0.65" transform="rotate(90 110 105)"/>
-              <ellipse cx="110" cy="105" rx="22" ry="28" fill="#f4c4d8" opacity="0.6" transform="rotate(135 110 105)"/>
-              <circle cx="110" cy="105" r="10" fill="#f9e0ea"/>
-              <circle cx="110" cy="105" r="5" fill="#e8a0bc"/>
-            </g>
-
-            <!-- Left flower - lavender -->
-            <g class="flower-group" style="animation-delay:0.3s">
-              <ellipse cx="72" cy="120" rx="16" ry="20" fill="#d4c0e8" opacity="0.85"/>
-              <ellipse cx="72" cy="120" rx="20" ry="13" fill="#d4c0e8" opacity="0.75" transform="rotate(45 72 120)"/>
-              <ellipse cx="72" cy="120" rx="20" ry="13" fill="#dac8ec" opacity="0.65" transform="rotate(90 72 120)"/>
-              <circle cx="72" cy="120" r="7" fill="#eeddf8"/>
-              <circle cx="72" cy="120" r="3.5" fill="#c0a8dc"/>
-            </g>
-
-            <!-- Right flower - blush -->
-            <g class="flower-group" style="animation-delay:0.5s">
-              <ellipse cx="148" cy="118" rx="17" ry="21" fill="#f8c8d4" opacity="0.85"/>
-              <ellipse cx="148" cy="118" rx="21" ry="14" fill="#f8c8d4" opacity="0.75" transform="rotate(60 148 118)"/>
-              <ellipse cx="148" cy="118" rx="21" ry="14" fill="#fad0dc" opacity="0.65" transform="rotate(120 148 118)"/>
-              <circle cx="148" cy="118" r="8" fill="#fde8ee"/>
-              <circle cx="148" cy="118" r="4" fill="#e8a8bc"/>
-            </g>
-
-            <!-- Small top flowers -->
-            <g class="flower-group" style="animation-delay:0.7s">
-              <circle cx="88" cy="82" r="12" fill="#e8d4f4" opacity="0.8"/>
-              <ellipse cx="88" cy="82" rx="14" ry="9" fill="#e4cef0" opacity="0.6" transform="rotate(45 88 82)"/>
-              <circle cx="88" cy="82" r="5" fill="#f4eafc"/>
-            </g>
-
-            <g class="flower-group" style="animation-delay:0.9s">
-              <circle cx="132" cy="80" r="11" fill="#fcd0e0" opacity="0.8"/>
-              <ellipse cx="132" cy="80" rx="13" ry="8" fill="#fbc8d8" opacity="0.6" transform="rotate(60 132 80)"/>
-              <circle cx="132" cy="80" r="4.5" fill="#fde8f0"/>
-            </g>
-
-            <!-- Baby's breath dots -->
-            <g opacity="0.55" class="flower-group" style="animation-delay:1.1s">
-              <circle cx="60" cy="95" r="4" fill="#f8e8f0"/>
-              <circle cx="68" cy="86" r="3" fill="#eeddf8"/>
-              <circle cx="155" cy="92" r="4" fill="#f8e8f0"/>
-              <circle cx="162" cy="100" r="3" fill="#eeddf8"/>
-              <circle cx="100" cy="68" r="3.5" fill="#f8e8f0"/>
-              <circle cx="120" cy="65" r="3" fill="#eeddf8"/>
-            </g>
-          </svg>
-
-          <div class="nametag">For Satvika</div>
-        </div>
-
-        <p class="bouquet-note fade-in">
-          I could not bring you a real bouquet, so here is a small virtual one for you.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== SECTION 3: MEMORIES ===================== -->
-<section id="memories">
-  <div class="inner">
-    <h2 class="section-title fade-in">Little things I remember</h2>
-    <p class="subtitle fade-in delay-1" style="font-style:italic; font-size:0.93rem;">Some moments stay quietly in the heart without asking for attention.</p>
-
-    <div class="timeline" style="margin-top:40px;">
-
-      <div class="memory-card fade-in delay-1">
-        <div class="mem-line"><div class="mem-dot"></div><div class="mem-trail"></div></div>
-        <div class="glass-card mem-content" style="padding:24px 28px;">
-          <p class="mem-date">25 March</p>
-          <p class="mem-text">The day we first talked.</p>
-          <p class="mem-sub">I still remember how simple it was, and how it stayed.</p>
-        </div>
-      </div>
-
-      <div class="memory-card fade-in delay-2">
-        <div class="mem-line"><div class="mem-dot"></div><div class="mem-trail"></div></div>
-        <div class="glass-card mem-content" style="padding:24px 28px;">
-          <p class="mem-date">Quietly, always</p>
-          <p class="mem-text">The small things you said without thinking much.</p>
-          <p class="mem-sub">Those are the ones I held on to the most.</p>
-        </div>
-      </div>
-
-      <div class="memory-card fade-in delay-3">
-        <div class="mem-line"><div class="mem-dot"></div></div>
-        <div class="glass-card mem-content" style="padding:24px 28px;">
-          <p class="mem-date">In between</p>
-          <p class="mem-text">The conversations that felt easy.</p>
-          <p class="mem-sub">I did not realize how much they meant until much later. That is on me.</p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ===================== SECTION 4: CARE ===================== -->
-<section id="care">
-  <div class="inner">
-    <div class="glass-card fade-in">
-      <p class="soft-note" style="margin-bottom:8px;">something i mean</p>
-      <div class="divider" style="margin:16px auto;"></div>
-
-      <div class="care-grid">
-
-        <div class="care-card fade-in delay-1">
-          <div class="care-icon heart"><i class="fa-solid fa-heart"></i></div>
-          <div class="care-body">
-            <p class="care-main">You are stronger than you think.</p>
-            <p class="care-sub">Not in the loud, obvious way. In the quiet way that matters more.</p>
-          </div>
-        </div>
-
-        <div class="care-card fade-in delay-2">
-          <div class="care-icon spark"><i class="fa-solid fa-sparkles"></i></div>
-          <div class="care-body">
-            <p class="care-main">Take your time. It is okay to feel everything.</p>
-            <p class="care-sub">There is no deadline for how you are supposed to feel. None at all.</p>
-          </div>
-        </div>
-
-        <div class="care-card fade-in delay-3">
-          <div class="care-icon shield"><i class="fa-solid fa-shield-heart"></i></div>
-          <div class="care-body">
-            <p class="care-main">I just want you to be okay.</p>
-            <p class="care-sub">That is all. Nothing more complicated than that.</p>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="divider" style="margin:28px auto 20px;"></div>
-      <p class="tamil">nee nalla irukanum</p>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== SECTION 5: MESSAGE ===================== -->
-<section id="message-section">
-  <div class="inner">
-    <h2 class="section-title fade-in">Say something, if you like</h2>
-    <p class="direct-note fade-in delay-1">Your message will be sent directly to Yash.</p>
-
-    <div class="glass-card fade-in delay-2">
-      <div class="form-group">
-        <label>Your name <span style="font-weight:300; text-transform:none; letter-spacing:0; color:var(--text-light); font-size:0.75rem;">(optional)</span></label>
-        <input type="text" id="senderName" placeholder="or leave it blank" />
-      </div>
-      <div class="form-group">
-        <label>Your message</label>
-        <textarea id="senderMsg" placeholder="Whatever is on your mind. No need to be formal."></textarea>
-      </div>
-      <button class="send-btn" id="sendBtn" onclick="sendMessage()">
-        <i class="fa-regular fa-paper-plane"></i>
-        Send message
-      </button>
-      <div class="success-msg" id="successMsg">
-        <i class="fa-regular fa-circle-check" style="color:var(--rose); margin-right:8px;"></i>
-        Message sent successfully.
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ===================== SECTION 6: CLOSING ===================== -->
-<section id="closing">
-  <div class="inner">
-    <p class="closing-line fade-in">I am not here to rush anything.</p>
-    <p class="closing-line fade-in delay-1">I just care quietly.</p>
-    <p class="closing-line fade-in delay-2">I will be here calmly.</p>
-    <p class="tamil fade-in delay-3" style="margin-top:32px; font-size:1.25rem;">enna mannichuko</p>
-    <div class="divider fade-in delay-3"></div>
-    <p class="signature fade-in delay-4">— Yash</p>
-  </div>
-</section>
-
-<footer style="text-align:center; padding:24px; font-size:0.75rem; color:rgba(200,150,220,0.3);">made with quiet sincerity</footer>
-
-<script>
-  /* ---- Floating petals ---- */
-  const container = document.getElementById('petals-container');
-  const colors = ['rgba(255,100,180,0.35)','rgba(180,80,255,0.3)','rgba(255,120,200,0.28)','rgba(200,100,255,0.32)','rgba(255,80,160,0.25)'];
-  for (let i = 0; i < 18; i++) {
-    const p = document.createElement('div');
-    p.className = 'petal';
-    const sz = 8 + Math.random() * 14;
-    const left = Math.random() * 100;
-    const duration = 18 + Math.random() * 22;
-    const delay = Math.random() * 20;
-    p.style.cssText = `
-      width:${sz}px; height:${sz}px;
-      left:${left}%;
-      background:${colors[Math.floor(Math.random()*colors.length)]};
-      animation-duration:${duration}s;
-      animation-delay:${delay}s;
-      border-radius: ${Math.random() > 0.5 ? '50% 0 50% 0' : '0 50% 0 50%'};
-    `;
-    container.appendChild(p);
-  }
-
-  /* ---- Intersection Observer for fade-ins ---- */
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        observer.unobserve(e.target);
-      }
-    });
-  }, { threshold: 0.12 });
-
-  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
-
-  /* ---- Bouquet reveal ---- */
-  function revealBouquet() {
-    const btn = document.getElementById('openBouquet');
-    const display = document.getElementById('bouquet-display');
-    btn.style.display = 'none';
-    display.classList.add('open');
-    // Trigger fade-in for children
-    display.querySelectorAll('.fade-in').forEach(el => {
-      setTimeout(() => el.classList.add('visible'), 800);
-    });
-  }
-
-  /* ---- Send message ---- */
-  async function sendMessage() {
-    const name = document.getElementById('senderName').value.trim();
-    const msg  = document.getElementById('senderMsg').value.trim();
-    const btn  = document.getElementById('sendBtn');
-    const succ = document.getElementById('successMsg');
+  // ── Access code: "64" stored as char-code array, never plain text ──
+  const _ac = [54,52].map(c=>String.fromCharCode(c)).join('');
+
+  // ── Admin code: "yash2025" stored as base64 ──
+  const _adm = atob('eWFzaDIwMjU=');
+
+  // ─────────────────────────────────────────────
+  //  SEND MESSAGE (Satvika → Firebase + Discord)
+  // ─────────────────────────────────────────────
+  window._sendMessage = async function() {
+    const nameEl = document.getElementById('senderName');
+    const msgEl  = document.getElementById('senderMsg');
+    const btn    = document.getElementById('sendBtn');
+    const succ   = document.getElementById('successMsg');
+    const name   = nameEl.value.trim();
+    const msg    = msgEl.value.trim();
 
     if (!msg) {
-      document.getElementById('senderMsg').focus();
-      document.getElementById('senderMsg').style.borderColor = 'rgba(212,160,181,0.8)';
-      setTimeout(() => document.getElementById('senderMsg').style.borderColor = '', 1500);
+      msgEl.focus();
+      msgEl.style.borderColor = 'rgba(255,100,180,0.8)';
+      setTimeout(() => msgEl.style.borderColor = '', 1500);
       return;
     }
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...';
 
-    const WEBHOOK_URL = 'https://discord.com/api/webhooks/1496223337930817596/Gzewo7R-lQ6b3FXm4RjgBoCioMlGHTssetSotrbiONZ9jp8uEJro5h7USzQ1TtOAYaUt';
+    // Save to Firebase
+    if (db) {
+      try {
+        await push(ref(db, 'messages'), {
+          from: name || 'Satvika',
+          message: msg,
+          ts: Date.now(),
+          reply: null
+        });
+      } catch(e) { console.warn('DB write error', e); }
+    }
 
+    // Ping Discord webhook
     try {
-      await fetch(WEBHOOK_URL, {
+      await fetch('https://discord.com/api/webhooks/1496223337930817596/Gzewo7R-lQ6b3FXm4RjgBoCioMlGHTssetSotrbiONZ9jp8uEJro5h7USzQ1TtOAYaUt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -814,17 +90,661 @@
           }]
         })
       });
-    } catch (e) {
-      // Silently handle errors — still show success to user
-    }
+    } catch(e) {}
 
     btn.innerHTML = '<i class="fa-regular fa-paper-plane"></i> Send message';
     btn.disabled = false;
-    document.getElementById('senderName').value = '';
-    document.getElementById('senderMsg').value = '';
+    nameEl.value = '';
+    msgEl.value  = '';
     succ.classList.add('show');
     setTimeout(() => succ.classList.remove('show'), 5000);
+  };
+
+  // ─────────────────────────────────────────────
+  //  ACCESS CODE CHECK (Satvika's inbox gate)
+  // ─────────────────────────────────────────────
+  window._checkCode = function() {
+    const input = document.getElementById('accessInput').value.trim();
+    const err   = document.getElementById('codeError');
+    if (input === _ac) {
+      document.getElementById('codeGate').style.display   = 'none';
+      document.getElementById('inboxPanel').style.display = 'block';
+      _loadInbox();
+    } else {
+      err.style.display = 'block';
+      document.getElementById('accessInput').value = '';
+      setTimeout(() => err.style.display = 'none', 2500);
+    }
+  };
+
+  // ─────────────────────────────────────────────
+  //  INBOX LOADER (Satvika sees her messages + replies)
+  // ─────────────────────────────────────────────
+  function _loadInbox() {
+    const container = document.getElementById('inboxList');
+    if (!db) {
+      container.innerHTML = '<p class="db-warn">Firebase is not configured yet. Ask Yash to set it up.</p>';
+      return;
+    }
+    container.innerHTML = '<p class="loading-note">Loading your messages...</p>';
+    onValue(ref(db, 'messages'), snap => {
+      const data = snap.val();
+      if (!data) {
+        container.innerHTML = '<p class="loading-note" style="font-style:italic;">Nothing here yet. Send your first message below.</p>';
+        return;
+      }
+      const entries = Object.entries(data).sort((a,b) => b[1].ts - a[1].ts);
+      container.innerHTML = '';
+      entries.forEach(([key, val]) => {
+        const d   = new Date(val.ts);
+        const ts  = d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})
+                  + ' · ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        const el  = document.createElement('div');
+        el.className = 'inbox-card';
+        el.innerHTML = `
+          <div class="inbox-meta">${ts}</div>
+          <div class="bubble sent">
+            <span class="bubble-label">you said</span>
+            <p>${esc(val.message)}</p>
+          </div>
+          ${val.reply
+            ? `<div class="bubble reply"><span class="bubble-label">yash replied</span><p>${esc(val.reply)}</p></div>`
+            : `<div class="no-reply"><i class="fa-regular fa-clock"></i> waiting for a reply</div>`
+          }`;
+        container.appendChild(el);
+      });
+    });
   }
+
+  // ─────────────────────────────────────────────
+  //  ADMIN CODE CHECK (Yash's reply panel)
+  // ─────────────────────────────────────────────
+  window._checkAdmin = function() {
+    const v   = document.getElementById('adminInput').value.trim();
+    const err = document.getElementById('adminError');
+    if (v === _adm) {
+      document.getElementById('adminGate').style.display  = 'none';
+      document.getElementById('adminPanel').style.display = 'block';
+      _loadAdmin();
+    } else {
+      err.style.display = 'block';
+      document.getElementById('adminInput').value = '';
+      setTimeout(() => err.style.display = 'none', 2500);
+    }
+  };
+
+  // ─────────────────────────────────────────────
+  //  ADMIN LOADER (Yash sees all messages, writes replies)
+  // ─────────────────────────────────────────────
+  window._loadAdmin = function() {
+    const container = document.getElementById('adminList');
+    if (!db) {
+      container.innerHTML = '<p class="db-warn">Firebase is not configured. Replace the config values at the top of this file.</p>';
+      return;
+    }
+    container.innerHTML = '<p class="loading-note">Loading...</p>';
+    onValue(ref(db, 'messages'), snap => {
+      const data = snap.val();
+      if (!data) { container.innerHTML = '<p class="loading-note">No messages yet.</p>'; return; }
+      const entries = Object.entries(data).sort((a,b) => b[1].ts - a[1].ts);
+      container.innerHTML = '';
+      entries.forEach(([key, val]) => {
+        const d  = new Date(val.ts);
+        const ts = d.toLocaleDateString('en-IN',{day:'numeric',month:'short'}) + ' · ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        const el = document.createElement('div');
+        el.className = 'admin-card';
+        el.innerHTML = `
+          <div class="inbox-meta">${ts} — <em>${esc(val.from || 'Satvika')}</em></div>
+          <div class="bubble sent" style="margin-bottom:12px;"><p>${esc(val.message)}</p></div>
+          ${val.reply
+            ? `<div class="bubble reply"><span class="bubble-label">your reply</span><p>${esc(val.reply)}</p></div>`
+            : `<div class="reply-row">
+                <textarea class="reply-ta" id="r_${key}" placeholder="Write your reply to Satvika..."></textarea>
+                <button class="reply-btn" onclick="_sendReply('${key}')">
+                  <i class="fa-regular fa-paper-plane"></i> Send reply
+                </button>
+               </div>`}`;
+        container.appendChild(el);
+      });
+    });
+  };
+
+  // ─────────────────────────────────────────────
+  //  SEND REPLY (Yash → Firebase, Satvika sees it)
+  // ─────────────────────────────────────────────
+  window._sendReply = async function(key) {
+    const ta  = document.getElementById('r_' + key);
+    if (!ta) return;
+    const txt = ta.value.trim();
+    if (!txt) { ta.focus(); return; }
+    ta.disabled = true;
+    const btn = ta.nextElementSibling;
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Sending...'; }
+    try {
+      await set(ref(db, 'messages/' + key + '/reply'), txt);
+    } catch(e) {
+      ta.disabled = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-regular fa-paper-plane"></i> Send reply'; }
+    }
+  };
+
+  function esc(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+      .replace(/\n/g,'<br>');
+  }
+</script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --rose:        #ff79c6;
+    --violet:      #c084fc;
+    --text-dark:   #f5e6ff;
+    --text-mid:    #d8b4fe;
+    --text-light:  #a78bc4;
+    --glass-bg:    rgba(30,12,40,0.55);
+    --glass-border:rgba(255,120,200,0.18);
+    --shadow:      0 8px 40px rgba(180,60,160,0.22);
+    --shadow-h:    0 16px 60px rgba(180,60,160,0.38);
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #0d0910;
+    color: var(--text-dark);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 55% at 10% 15%, rgba(160,30,100,0.45) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 90% 85%, rgba(100,20,160,0.45) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 60% at 50% 50%, rgba(80,10,120,0.3)  0%, transparent 65%),
+      radial-gradient(ellipse 40% 35% at 75% 10%, rgba(180,40,130,0.3) 0%, transparent 55%),
+      linear-gradient(135deg, #0d0910 0%, #140820 50%, #0d0910 100%);
+    z-index: -1;
+  }
+
+  /* ── Petals ── */
+  .petal { position:fixed; border-radius:50% 0 50% 0; opacity:0; animation:floatPetal linear infinite; pointer-events:none; z-index:0; }
+  @keyframes floatPetal {
+    0%  { transform:translateY(110vh) rotate(0deg);   opacity:0; }
+    5%  { opacity:0.35; }
+    90% { opacity:0.2; }
+    100%{ transform:translateY(-10vh) rotate(360deg); opacity:0; }
+  }
+
+  /* ── Nav ── */
+  nav {
+    position:fixed; top:0; left:0; right:0; z-index:100;
+    display:flex; justify-content:space-between; align-items:center;
+    padding:14px 24px;
+    background:rgba(13,9,16,0.78);
+    backdrop-filter:blur(14px);
+    border-bottom:1px solid rgba(255,100,180,0.15);
+  }
+  .wordmark { font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.1rem; color:var(--text-mid); opacity:.8; }
+  .nav-btns { display:flex; gap:8px; }
+  .nav-pill {
+    background:rgba(255,100,180,0.1);
+    border:1px solid rgba(255,100,180,0.22);
+    border-radius:30px; padding:7px 15px;
+    font-size:0.78rem; color:var(--text-mid);
+    cursor:pointer; transition:all .3s;
+    font-family:'DM Sans',sans-serif; letter-spacing:.03em;
+  }
+  .nav-pill:hover { background:rgba(255,100,180,0.22); }
+  .nav-pill.dim { opacity:.28; padding:7px 11px; font-size:.7rem; }
+
+  /* ── Sections ── */
+  section { min-height:100svh; display:flex; align-items:center; justify-content:center; padding:120px 24px 80px; position:relative; z-index:1; }
+  .inner  { max-width:680px; width:100%; }
+
+  .fade-in { opacity:0; transform:translateY(28px); transition:opacity .9s cubic-bezier(.25,.46,.45,.94), transform .9s cubic-bezier(.25,.46,.45,.94); }
+  .fade-in.visible { opacity:1; transform:translateY(0); }
+  .fade-in.delay-1 { transition-delay:.15s; }
+  .fade-in.delay-2 { transition-delay:.3s; }
+  .fade-in.delay-3 { transition-delay:.45s; }
+  .fade-in.delay-4 { transition-delay:.6s; }
+
+  .divider { width:40px; height:1px; background:linear-gradient(to right,transparent,var(--rose),transparent); opacity:.5; margin:32px auto; }
+
+  .display { font-family:'Cormorant Garamond',serif; font-size:clamp(2.6rem,7vw,4.2rem); font-weight:300; line-height:1.2; color:var(--text-dark); text-align:center; }
+  .display em { font-style:italic; color:var(--rose); text-shadow:0 0 40px rgba(255,121,198,0.4); }
+
+  .subtitle { font-size:clamp(.95rem,2.5vw,1.1rem); font-weight:300; line-height:1.85; color:var(--text-mid); text-align:center; max-width:520px; margin:0 auto; }
+  .soft-note { font-size:.88rem; font-weight:300; color:var(--text-light); text-align:center; letter-spacing:.02em; }
+  .tamil { font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.1rem; color:var(--violet); text-align:center; opacity:.75; letter-spacing:.06em; }
+
+  .glass-card { background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:20px; padding:36px 40px; box-shadow:var(--shadow); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); transition:box-shadow .4s,transform .4s; }
+  .glass-card:hover { box-shadow:var(--shadow-h); transform:translateY(-3px); }
+
+  /* Landing */
+  #landing { text-align:center; }
+  #landing .inner { gap:20px; display:flex; flex-direction:column; align-items:center; }
+
+  /* Bouquet */
+  #bouquet .inner { text-align:center; }
+  .bouquet-btn { display:inline-flex; align-items:center; gap:10px; background:linear-gradient(135deg,rgba(255,100,180,.15),rgba(160,80,255,.15)); border:1px solid rgba(255,100,180,.35); color:var(--text-mid); font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:400; letter-spacing:.04em; padding:14px 32px; border-radius:60px; cursor:pointer; transition:all .35s; backdrop-filter:blur(8px); }
+  .bouquet-btn:hover { background:linear-gradient(135deg,rgba(255,100,180,.3),rgba(160,80,255,.3)); transform:translateY(-2px); box-shadow:0 8px 30px rgba(255,100,180,.25); }
+  #bouquet-display { display:none; }
+  #bouquet-display.open { display:block; }
+  .bouquet-wrap { position:relative; display:inline-block; margin:0 auto; }
+  .nametag { position:absolute; bottom:-10px; right:-20px; background:var(--glass-bg); border:1px solid var(--glass-border); border-radius:8px; padding:6px 14px; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:.95rem; color:var(--text-mid); box-shadow:0 4px 16px rgba(180,60,160,.3); backdrop-filter:blur(8px); animation:tagFloat 3s ease-in-out infinite; }
+  @keyframes tagFloat { 0%,100%{transform:rotate(-2deg) translateY(0)} 50%{transform:rotate(2deg) translateY(-4px)} }
+  .bouquet-note { margin-top:32px; font-size:.93rem; font-weight:300; color:var(--text-light); font-style:italic; }
+  .flower-group { animation:bloomIn 1.2s cubic-bezier(.34,1.56,.64,1) forwards; opacity:0; transform-origin:50% 100%; }
+  @keyframes bloomIn { from{opacity:0;transform:scale(.3) translateY(20px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .leaf-svg { animation:leafSway 4s ease-in-out infinite; transform-origin:50% 80%; }
+  @keyframes leafSway { 0%,100%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} }
+
+  /* Memories */
+  #memories .section-title { font-family:'Cormorant Garamond',serif; font-size:clamp(1.6rem,4vw,2.2rem); font-weight:300; color:var(--text-dark); text-align:center; margin-bottom:12px; }
+  .timeline { margin-top:40px; display:flex; flex-direction:column; gap:20px; }
+  .memory-card { display:flex; gap:20px; align-items:flex-start; }
+  .mem-line { display:flex; flex-direction:column; align-items:center; padding-top:4px; }
+  .mem-dot  { width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg,var(--rose),var(--violet)); flex-shrink:0; }
+  .mem-trail{ width:1px; flex:1; background:linear-gradient(to bottom,rgba(255,100,180,.3),transparent); margin-top:8px; min-height:40px; }
+  .mem-content { flex:1; padding-bottom:8px; }
+  .mem-date { font-size:.78rem; color:var(--rose); letter-spacing:.08em; text-transform:uppercase; font-weight:500; margin-bottom:8px; }
+  .mem-text { font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:300; color:var(--text-dark); line-height:1.5; margin-bottom:8px; }
+  .mem-sub  { font-size:.88rem; color:var(--text-light); font-weight:300; line-height:1.7; }
+
+  /* Care */
+  .care-grid { display:grid; grid-template-columns:1fr; gap:16px; margin-top:36px; }
+  .care-card { display:flex; align-items:flex-start; gap:18px; }
+  .care-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1.1rem; }
+  .care-icon.heart  { background:rgba(255,100,180,.15); color:var(--rose); }
+  .care-icon.spark  { background:rgba(160,80,255,.15);  color:var(--violet); }
+  .care-icon.shield { background:rgba(255,100,180,.12); color:var(--rose); }
+  .care-main { font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-weight:300; color:var(--text-dark); line-height:1.4; margin-bottom:4px; }
+  .care-sub  { font-size:.87rem; color:var(--text-light); font-weight:300; line-height:1.65; }
+
+  /* Message form */
+  #message-section .section-title { font-family:'Cormorant Garamond',serif; font-size:clamp(1.5rem,4vw,2rem); font-weight:300; color:var(--text-dark); text-align:center; margin-bottom:8px; }
+  .direct-note { font-size:.85rem; color:var(--text-light); text-align:center; margin-bottom:28px; font-weight:300; }
+  .form-group { margin-bottom:18px; }
+  label { display:block; font-size:.78rem; color:var(--text-light); letter-spacing:.06em; text-transform:uppercase; font-weight:500; margin-bottom:8px; }
+  input[type="text"], input[type="password"], textarea {
+    width:100%; background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,100,180,.2); border-radius:12px;
+    padding:14px 18px; font-family:'DM Sans',sans-serif;
+    font-size:.95rem; font-weight:300; color:var(--text-dark);
+    outline:none; transition:border-color .3s,box-shadow .3s; resize:vertical;
+  }
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+    border-color:rgba(255,100,180,.5); box-shadow:0 0 0 3px rgba(255,100,180,.1);
+  }
+  input::placeholder, textarea::placeholder { color:var(--text-light); opacity:.6; font-weight:300; }
+  textarea { min-height:130px; }
+
+  .send-btn { width:100%; background:linear-gradient(135deg,rgba(255,100,180,.2),rgba(160,80,255,.2)); border:1px solid rgba(255,100,180,.35); border-radius:14px; padding:16px; font-family:'DM Sans',sans-serif; font-size:.95rem; font-weight:400; color:var(--text-mid); letter-spacing:.04em; cursor:pointer; transition:all .35s; display:flex; align-items:center; justify-content:center; gap:10px; margin-top:8px; }
+  .send-btn:hover { background:linear-gradient(135deg,rgba(255,100,180,.38),rgba(160,80,255,.35)); transform:translateY(-2px); box-shadow:0 8px 28px rgba(255,100,180,.2); }
+  .send-btn:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+  .success-msg { display:none; margin-top:18px; padding:14px 20px; background:rgba(255,100,180,.1); border:1px solid rgba(255,100,180,.25); border-radius:12px; text-align:center; font-size:.9rem; color:var(--text-mid); font-weight:300; }
+  .success-msg.show { display:block; }
+
+  /* Closing */
+  #closing { text-align:center; }
+  #closing .inner { display:flex; flex-direction:column; align-items:center; }
+  .closing-line { font-family:'Cormorant Garamond',serif; font-size:clamp(1.3rem,3.5vw,1.8rem); font-weight:300; color:var(--text-mid); line-height:2; }
+  .signature { margin-top:40px; font-family:'Cormorant Garamond',serif; font-style:italic; font-size:1.4rem; font-weight:300; color:var(--text-mid); opacity:.7; }
+
+  /* ═══════════════════════════════
+     OVERLAY — shared by inbox + admin
+     ═══════════════════════════════ */
+  .overlay {
+    display:none; position:fixed; inset:0; z-index:500;
+    background:rgba(8,4,14,.94);
+    backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    overflow-y:auto; padding:72px 20px 48px;
+  }
+  .overlay.open { display:block; animation:overlayIn .35s ease; }
+  @keyframes overlayIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  .overlay-inner { max-width:640px; margin:0 auto; }
+  .overlay-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .overlay-title  { font-family:'Cormorant Garamond',serif; font-size:1.85rem; font-weight:300; color:var(--text-dark); }
+  .overlay-close  { background:rgba(255,100,180,.1); border:1px solid rgba(255,100,180,.22); border-radius:50%; width:38px; height:38px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-light); font-size:.9rem; transition:all .3s; }
+  .overlay-close:hover { background:rgba(255,100,180,.25); color:var(--text-dark); }
+
+  /* Code gate */
+  .gate-wrap  { text-align:center; padding:20px 0; }
+  .gate-title { font-family:'Cormorant Garamond',serif; font-size:1.5rem; font-weight:300; color:var(--text-dark); margin-bottom:8px; }
+  .gate-sub   { font-size:.88rem; color:var(--text-light); margin-bottom:28px; }
+  .gate-row   { display:flex; gap:10px; max-width:280px; margin:0 auto; }
+  .gate-row input { text-align:center; letter-spacing:.25em; font-size:1.1rem; }
+  .gate-btn   { background:linear-gradient(135deg,rgba(255,100,180,.25),rgba(160,80,255,.2)); border:1px solid rgba(255,100,180,.4); border-radius:12px; padding:14px 18px; color:var(--text-mid); cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.9rem; white-space:nowrap; transition:all .3s; }
+  .gate-btn:hover { background:linear-gradient(135deg,rgba(255,100,180,.4),rgba(160,80,255,.35)); }
+  .gate-error { display:none; margin-top:14px; font-size:.85rem; color:var(--rose); opacity:.85; }
+
+  /* Inbox + Admin shared card styles */
+  .inbox-card, .admin-card {
+    background:rgba(22,8,34,.65);
+    border:1px solid rgba(255,120,200,.12);
+    border-radius:16px; padding:20px 22px; margin-bottom:16px;
+  }
+  .inbox-meta { font-size:.75rem; color:var(--text-light); margin-bottom:14px; letter-spacing:.04em; }
+  .inbox-meta em { color:var(--rose); font-style:italic; }
+
+  .bubble { border-radius:14px; padding:14px 18px; margin-bottom:10px; }
+  .bubble.sent  { background:rgba(255,100,180,.1);  border:1px solid rgba(255,100,180,.2);  margin-left:8px; }
+  .bubble.reply { background:rgba(160,80,255,.12);  border:1px solid rgba(160,80,255,.22);  margin-right:8px; }
+  .bubble-label { display:block; font-size:.68rem; letter-spacing:.07em; text-transform:uppercase; margin-bottom:7px; opacity:.55; color:var(--text-light); }
+  .bubble p { font-size:.95rem; font-weight:300; color:var(--text-dark); line-height:1.65; }
+
+  .no-reply { font-size:.8rem; color:var(--text-light); opacity:.5; padding:8px 12px; font-style:italic; }
+  .no-reply i { margin-right:6px; }
+
+  .loading-note { color:var(--text-light); text-align:center; font-size:.9rem; padding:24px 0; }
+  .db-warn { background:rgba(255,160,60,.08); border:1px solid rgba(255,160,60,.2); border-radius:10px; padding:14px 18px; font-size:.83rem; color:rgba(255,200,120,.85); text-align:center; margin-bottom:16px; }
+
+  /* Reply row (admin) */
+  .reply-row { margin-top:12px; }
+  .reply-ta  { width:100%; background:rgba(255,255,255,.04); border:1px solid rgba(160,80,255,.22); border-radius:10px; padding:12px 16px; color:var(--text-dark); font-family:'DM Sans',sans-serif; font-size:.9rem; font-weight:300; outline:none; resize:vertical; min-height:80px; margin-bottom:10px; transition:border-color .3s; }
+  .reply-ta:focus { border-color:rgba(160,80,255,.5); }
+  .reply-btn { background:linear-gradient(135deg,rgba(160,80,255,.25),rgba(255,100,180,.18)); border:1px solid rgba(160,80,255,.35); border-radius:10px; padding:10px 20px; color:var(--text-mid); cursor:pointer; font-family:'DM Sans',sans-serif; font-size:.85rem; display:inline-flex; align-items:center; gap:8px; transition:all .3s; }
+  .reply-btn:hover { background:linear-gradient(135deg,rgba(160,80,255,.42),rgba(255,100,180,.3)); }
+  .reply-btn:disabled { opacity:.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+
+<div id="petals-container"></div>
+
+<!-- ══ NAV ══ -->
+<nav>
+  <span class="wordmark">for satvika</span>
+  <div class="nav-btns">
+    <button class="nav-pill" onclick="openInbox()">
+      <i class="fa-regular fa-envelope" style="margin-right:5px;font-size:.8rem;"></i>replies
+    </button>
+    <button class="nav-pill dim" onclick="openAdmin()" title="Admin">
+      <i class="fa-solid fa-key"></i>
+    </button>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════
+     INBOX OVERLAY (Satvika's view)
+     ═══════════════════════════════════ -->
+<div class="overlay" id="inboxOverlay">
+  <div class="overlay-inner">
+    <div class="overlay-header">
+      <h2 class="overlay-title">Your messages</h2>
+      <button class="overlay-close" onclick="closeInbox()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Gate -->
+    <div id="codeGate" class="gate-wrap">
+      <p class="gate-title">Enter your access code</p>
+      <p class="gate-sub">Yash gave you a private code to open this space.</p>
+      <div class="gate-row">
+        <input type="password" id="accessInput" placeholder="••••" maxlength="8"
+               onkeydown="if(event.key==='Enter')_checkCode()" />
+        <button class="gate-btn" onclick="_checkCode()">Open</button>
+      </div>
+      <p class="gate-error" id="codeError">That code is not right.</p>
+    </div>
+
+    <!-- Inbox (shown after correct code) -->
+    <div id="inboxPanel" style="display:none;">
+      <p class="soft-note" style="margin-bottom:24px;text-align:left;font-style:italic;">Everything you sent, and whatever Yash wrote back — newest first.</p>
+      <div id="inboxList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     ADMIN OVERLAY (Yash's reply panel)
+     ═══════════════════════════════════ -->
+<div class="overlay" id="adminOverlay">
+  <div class="overlay-inner">
+    <div class="overlay-header">
+      <h2 class="overlay-title">Reply panel</h2>
+      <button class="overlay-close" onclick="closeAdmin()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Gate -->
+    <div id="adminGate" class="gate-wrap">
+      <p class="gate-title">Admin access</p>
+      <p class="gate-sub">Only for Yash.</p>
+      <div class="gate-row">
+        <input type="password" id="adminInput" placeholder="••••••••" maxlength="24"
+               onkeydown="if(event.key==='Enter')_checkAdmin()" />
+        <button class="gate-btn" onclick="_checkAdmin()">Enter</button>
+      </div>
+      <p class="gate-error" id="adminError">Incorrect code.</p>
+    </div>
+
+    <!-- Admin panel (shown after correct code) -->
+    <div id="adminPanel" style="display:none;">
+      <p class="soft-note" style="margin-bottom:24px;text-align:left;font-style:italic;">All messages from Satvika. Write your reply below each one.</p>
+      <div id="adminList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ SECTION 1: LANDING ══════ -->
+<section id="landing">
+  <div class="inner">
+    <p class="soft-note fade-in">a quiet moment</p>
+    <h1 class="display fade-in delay-1"><em>I am really sorry.</em></h1>
+    <div class="divider fade-in delay-2"></div>
+    <p class="subtitle fade-in delay-2">I did not understand what you were going through and I regret how I handled things.</p>
+    <p class="soft-note fade-in delay-3" style="margin-top:16px;">No pressure. Just something I wanted to say calmly.</p>
+    <p class="tamil fade-in delay-4" style="margin-top:24px;">enna mannichuko</p>
+  </div>
+</section>
+
+<!-- ══════ SECTION 2: BOUQUET ══════ -->
+<section id="bouquet">
+  <div class="inner">
+    <div class="glass-card fade-in" style="text-align:center;">
+      <p class="soft-note" style="margin-bottom:28px;">something small, just for you</p>
+      <button class="bouquet-btn" id="openBouquet" onclick="revealBouquet()">
+        <i class="fa-solid fa-seedling"></i> Open this
+      </button>
+      <div id="bouquet-display" style="margin-top:36px;">
+        <div class="bouquet-wrap">
+          <svg width="220" height="240" viewBox="0 0 220 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g class="leaf-svg">
+              <path d="M110 230 Q105 180 95 140" stroke="#a8c5a0" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M110 230 Q115 175 125 138" stroke="#a8c5a0" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+              <path d="M110 230 Q108 185 108 140" stroke="#b5cead" stroke-width="2"   stroke-linecap="round" fill="none"/>
+              <ellipse cx="90"  cy="165" rx="14" ry="8" fill="#b8d4b0" transform="rotate(-40 90 165)"  opacity=".8"/>
+              <ellipse cx="128" cy="160" rx="14" ry="8" fill="#b8d4b0" transform="rotate(40 128 160)"  opacity=".8"/>
+            </g>
+            <path d="M96 210 Q110 220 124 210" stroke="#f0c8d8" stroke-width="4" stroke-linecap="round" fill="none" opacity=".7"/>
+            <path d="M99 208 Q92 220 86 215"   stroke="#f0c8d8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".6"/>
+            <path d="M121 208 Q128 220 134 215" stroke="#f0c8d8" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".6"/>
+            <g class="flower-group" style="animation-delay:.1s">
+              <ellipse cx="110" cy="105" rx="22" ry="28" fill="#f4b8d0" opacity=".85"/>
+              <ellipse cx="110" cy="105" rx="28" ry="18" fill="#f4b8d0" opacity=".75" transform="rotate(45 110 105)"/>
+              <ellipse cx="110" cy="105" rx="28" ry="18" fill="#f4c4d8" opacity=".65" transform="rotate(90 110 105)"/>
+              <ellipse cx="110" cy="105" rx="22" ry="28" fill="#f4c4d8" opacity=".6"  transform="rotate(135 110 105)"/>
+              <circle cx="110" cy="105" r="10" fill="#f9e0ea"/><circle cx="110" cy="105" r="5" fill="#e8a0bc"/>
+            </g>
+            <g class="flower-group" style="animation-delay:.3s">
+              <ellipse cx="72" cy="120" rx="16" ry="20" fill="#d4c0e8" opacity=".85"/>
+              <ellipse cx="72" cy="120" rx="20" ry="13" fill="#d4c0e8" opacity=".75" transform="rotate(45 72 120)"/>
+              <ellipse cx="72" cy="120" rx="20" ry="13" fill="#dac8ec" opacity=".65" transform="rotate(90 72 120)"/>
+              <circle cx="72" cy="120" r="7" fill="#eeddf8"/><circle cx="72" cy="120" r="3.5" fill="#c0a8dc"/>
+            </g>
+            <g class="flower-group" style="animation-delay:.5s">
+              <ellipse cx="148" cy="118" rx="17" ry="21" fill="#f8c8d4" opacity=".85"/>
+              <ellipse cx="148" cy="118" rx="21" ry="14" fill="#f8c8d4" opacity=".75" transform="rotate(60 148 118)"/>
+              <ellipse cx="148" cy="118" rx="21" ry="14" fill="#fad0dc" opacity=".65" transform="rotate(120 148 118)"/>
+              <circle cx="148" cy="118" r="8" fill="#fde8ee"/><circle cx="148" cy="118" r="4" fill="#e8a8bc"/>
+            </g>
+            <g class="flower-group" style="animation-delay:.7s">
+              <circle cx="88" cy="82" r="12" fill="#e8d4f4" opacity=".8"/>
+              <ellipse cx="88" cy="82" rx="14" ry="9" fill="#e4cef0" opacity=".6" transform="rotate(45 88 82)"/>
+              <circle cx="88" cy="82" r="5" fill="#f4eafc"/>
+            </g>
+            <g class="flower-group" style="animation-delay:.9s">
+              <circle cx="132" cy="80" r="11" fill="#fcd0e0" opacity=".8"/>
+              <ellipse cx="132" cy="80" rx="13" ry="8" fill="#fbc8d8" opacity=".6" transform="rotate(60 132 80)"/>
+              <circle cx="132" cy="80" r="4.5" fill="#fde8f0"/>
+            </g>
+            <g opacity=".55" class="flower-group" style="animation-delay:1.1s">
+              <circle cx="60" cy="95"  r="4"   fill="#f8e8f0"/><circle cx="68"  cy="86"  r="3"   fill="#eeddf8"/>
+              <circle cx="155" cy="92" r="4"   fill="#f8e8f0"/><circle cx="162" cy="100" r="3"   fill="#eeddf8"/>
+              <circle cx="100" cy="68" r="3.5" fill="#f8e8f0"/><circle cx="120" cy="65"  r="3"   fill="#eeddf8"/>
+            </g>
+          </svg>
+          <div class="nametag">For Satvika</div>
+        </div>
+        <p class="bouquet-note fade-in">I could not bring you a real bouquet, so here is a small virtual one for you.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ SECTION 3: MEMORIES ══════ -->
+<section id="memories">
+  <div class="inner">
+    <h2 class="section-title fade-in">Little things I remember</h2>
+    <p class="subtitle fade-in delay-1" style="font-style:italic;font-size:.93rem;">Some moments stay quietly in the heart without asking for attention.</p>
+    <div class="timeline" style="margin-top:40px;">
+      <div class="memory-card fade-in delay-1">
+        <div class="mem-line"><div class="mem-dot"></div><div class="mem-trail"></div></div>
+        <div class="glass-card mem-content" style="padding:24px 28px;">
+          <p class="mem-date">25 March</p>
+          <p class="mem-text">The day we first talked.</p>
+          <p class="mem-sub">I still remember how simple it was, and how it stayed.</p>
+        </div>
+      </div>
+      <div class="memory-card fade-in delay-2">
+        <div class="mem-line"><div class="mem-dot"></div><div class="mem-trail"></div></div>
+        <div class="glass-card mem-content" style="padding:24px 28px;">
+          <p class="mem-date">Quietly, always</p>
+          <p class="mem-text">The small things you said without thinking much.</p>
+          <p class="mem-sub">Those are the ones I held on to the most.</p>
+        </div>
+      </div>
+      <div class="memory-card fade-in delay-3">
+        <div class="mem-line"><div class="mem-dot"></div></div>
+        <div class="glass-card mem-content" style="padding:24px 28px;">
+          <p class="mem-date">In between</p>
+          <p class="mem-text">The conversations that felt easy.</p>
+          <p class="mem-sub">I did not realize how much they meant until much later. That is on me.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ SECTION 4: CARE ══════ -->
+<section id="care">
+  <div class="inner">
+    <div class="glass-card fade-in">
+      <p class="soft-note" style="margin-bottom:8px;">something i mean</p>
+      <div class="divider" style="margin:16px auto;"></div>
+      <div class="care-grid">
+        <div class="care-card fade-in delay-1">
+          <div class="care-icon heart"><i class="fa-solid fa-heart"></i></div>
+          <div><p class="care-main">You are stronger than you think.</p><p class="care-sub">Not in the loud, obvious way. In the quiet way that matters more.</p></div>
+        </div>
+        <div class="care-card fade-in delay-2">
+          <div class="care-icon spark"><i class="fa-solid fa-sparkles"></i></div>
+          <div><p class="care-main">Take your time. It is okay to feel everything.</p><p class="care-sub">There is no deadline for how you are supposed to feel. None at all.</p></div>
+        </div>
+        <div class="care-card fade-in delay-3">
+          <div class="care-icon shield"><i class="fa-solid fa-shield-heart"></i></div>
+          <div><p class="care-main">I just want you to be okay.</p><p class="care-sub">That is all. Nothing more complicated than that.</p></div>
+        </div>
+      </div>
+      <div class="divider" style="margin:28px auto 20px;"></div>
+      <p class="tamil">nee nalla irukanum</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ SECTION 5: MESSAGE ══════ -->
+<section id="message-section">
+  <div class="inner">
+    <h2 class="section-title fade-in">Say something, if you like</h2>
+    <p class="direct-note fade-in delay-1">Your message will be sent directly to Yash.</p>
+    <div class="glass-card fade-in delay-2">
+      <div class="form-group">
+        <label>Your name <span style="font-weight:300;text-transform:none;letter-spacing:0;color:var(--text-light);font-size:.75rem;">(optional)</span></label>
+        <input type="text" id="senderName" placeholder="or leave it blank" />
+      </div>
+      <div class="form-group">
+        <label>Your message</label>
+        <textarea id="senderMsg" placeholder="Whatever is on your mind. No need to be formal."></textarea>
+      </div>
+      <button class="send-btn" id="sendBtn" onclick="_sendMessage()">
+        <i class="fa-regular fa-paper-plane"></i> Send message
+      </button>
+      <div class="success-msg" id="successMsg">
+        <i class="fa-regular fa-circle-check" style="color:var(--rose);margin-right:8px;"></i>
+        Message sent. Yash will see it soon.
+      </div>
+    </div>
+    <p class="soft-note fade-in delay-3" style="margin-top:20px;font-style:italic;">
+      To read Yash's replies, tap <strong style="color:var(--text-mid);font-weight:400;">replies</strong> in the top bar and enter your access code.
+    </p>
+  </div>
+</section>
+
+<!-- ══════ SECTION 6: CLOSING ══════ -->
+<section id="closing">
+  <div class="inner">
+    <p class="closing-line fade-in">I am not here to rush anything.</p>
+    <p class="closing-line fade-in delay-1">I just care quietly.</p>
+    <p class="closing-line fade-in delay-2">I will be here calmly.</p>
+    <p class="tamil fade-in delay-3" style="margin-top:32px;font-size:1.25rem;">enna mannichuko</p>
+    <div class="divider fade-in delay-3"></div>
+    <p class="signature fade-in delay-4">— Yash</p>
+  </div>
+</section>
+
+<footer style="text-align:center;padding:24px;font-size:.75rem;color:rgba(200,150,220,.28);">made with quiet sincerity</footer>
+
+<script>
+  /* ── Petals ── */
+  const _pc = document.getElementById('petals-container');
+  const _cl = ['rgba(255,100,180,.35)','rgba(180,80,255,.3)','rgba(255,120,200,.28)','rgba(200,100,255,.32)','rgba(255,80,160,.25)'];
+  for(let i=0;i<18;i++){
+    const p=document.createElement('div'); p.className='petal';
+    const sz=8+Math.random()*14;
+    p.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;background:${_cl[Math.floor(Math.random()*_cl.length)]};animation-duration:${18+Math.random()*22}s;animation-delay:${Math.random()*20}s;border-radius:${Math.random()>.5?'50% 0 50% 0':'0 50% 0 50%'};`;
+    _pc.appendChild(p);
+  }
+
+  /* ── Fade-ins ── */
+  const _obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('visible');_obs.unobserve(e.target);}});
+  },{threshold:.12});
+  document.querySelectorAll('.fade-in').forEach(el=>_obs.observe(el));
+
+  /* ── Bouquet ── */
+  function revealBouquet(){
+    document.getElementById('openBouquet').style.display='none';
+    const d=document.getElementById('bouquet-display');
+    d.classList.add('open');
+    d.querySelectorAll('.fade-in').forEach(el=>setTimeout(()=>el.classList.add('visible'),800));
+  }
+
+  /* ── Overlay helpers ── */
+  function openInbox(){ document.getElementById('inboxOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeInbox(){ document.getElementById('inboxOverlay').classList.remove('open'); document.body.style.overflow=''; }
+  function openAdmin(){ document.getElementById('adminOverlay').classList.add('open'); document.body.style.overflow='hidden'; }
+  function closeAdmin(){ document.getElementById('adminOverlay').classList.remove('open'); document.body.style.overflow=''; }
+
+  /* ── Close on backdrop tap ── */
+  document.getElementById('inboxOverlay').addEventListener('click',function(e){if(e.target===this)closeInbox();});
+  document.getElementById('adminOverlay').addEventListener('click',function(e){if(e.target===this)closeAdmin();});
 </script>
 
 </body>
